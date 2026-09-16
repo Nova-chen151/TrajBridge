@@ -9,11 +9,13 @@ The code, models, and full documentation **will be open-sourced upon acceptance*
 
 ## 📄 Overview
 
-Please refer to the [Overview PDF](./overview.pdf) for a detailed introduction to our method, framework, and experimental results.
+<p align="center">
+  <img src="./overview.png" alt="TrajBridge Overview" width="100%">
+</p>
 
 ## 📅 News
 
-- **[2026.09.16]** Repository created. Paper submitted for review.
+- **[Current Date]** Repository created. Paper submitted for review.
 
 ## 🚀 Coming Soon
 
