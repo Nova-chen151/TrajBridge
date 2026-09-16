@@ -13,7 +13,7 @@ Please refer to the [Overview PDF](./overview.pdf) for a detailed introduction t
 
 ## 📅 News
 
-- **[Current Date]** Repository created. Paper submitted for review.
+- **[2026.09.16]** Repository created. Paper submitted for review.
 
 ## 🚀 Coming Soon
 
