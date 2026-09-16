@@ -15,7 +15,7 @@ The code, models, and full documentation **will be open-sourced upon acceptance*
 
 ## 📅 News
 
-- **[Current Date]** Repository created. Paper submitted for review.
+- **[2026.09.16]** Repository created. Paper submitted for review.
 
 ## 🚀 Coming Soon
 
