@@ -6,7 +6,14 @@ Yuhang Chen, Ruyi Fu, Liyong Zheng, Zuduo Zheng, Jian Sun, and Jie Sun
 
 TrajBridge is a multi-agent trajectory reconstruction project for the INTERACTION dataset. The repository keeps a single, reproducible training and validation path for the model, with the package layout and command-line workflow organized in the spirit of [QCNet](https://github.com/ZikangZhou/QCNet).
 
-**INTERACTION trajectory reconstruction** · [Getting Started](#getting-started) · [Training](#training) · [Validation](#validation) · [Citation](#citation-and-contact)
+<div align="center">
+
+[![Method](https://img.shields.io/badge/Method-TrajBridge-2878B5?style=for-the-badge)](#method-in-the-paper)
+[![Results](https://img.shields.io/badge/Paper-Results-019B8F?style=for-the-badge)](#results-from-the-paper)
+[![Getting Started](https://img.shields.io/badge/Getting_Started-5F259F?style=for-the-badge)](#getting-started)
+[![Training](https://img.shields.io/badge/Training-A42C25?style=for-the-badge)](#training)
+
+</div>
 
 ## Overview
 
@@ -26,6 +33,38 @@ TrajBridge reconstructs an internal trajectory gap using observed motion before 
 The paper evaluates reconstruction on INTERACTION, zero-shot transfer to 500 Waymo Open Motion Dataset scenes, and downstream kinematic and traffic-conflict analysis. Its reported INTERACTION GapFDE and boundary error are 0.050 m and 0.029 m, respectively. These are manuscript results for the full method. They have not been reproduced by the public training command described below.
 
 **Released training scope.** The current `train.py` uses the history/map backbone for reconstruction and disables the future-tail and flow bridge branches. It does not train the full paper model or reproduce its reported metrics. The bridge modules remain in the source tree, but the public CLI does not configure their training.
+
+## Highlights
+
+- **Two-sided reconstruction** uses observed history and a measured future tail to constrain an internal trajectory gap.
+- **Multi-agent motion priors** model interactions across agents, time, and trajectory modes, with optional map context.
+- **Conditional flow refinement** uses a learned vector field to refine prior trajectories under future-tail conditioning.
+- **Cross-dataset evaluation** examines reconstruction on INTERACTION and zero-shot transfer to a Waymo validation subset.
+
+## Results from the paper
+
+The manuscript evaluates the complete TrajBridge model using 10 history frames, 20 missing frames, and 5 future-tail frames. The values below are reported in the supplied manuscript, using scene-level mode selection. The Waymo study transfers the INTERACTION-trained model without fine-tuning. These figures and metrics describe the full paper model and have not been reproduced by the current public training entry point.
+
+| Evaluation | GapADE ↓ | GapFDE ↓ | Boundary error ↓ |
+| --- | ---: | ---: | ---: |
+| INTERACTION validation | 0.045 m | 0.050 m | 0.029 m |
+| Waymo validation subset, 500 scenes | 0.091 m | 0.105 m | 0.066 m |
+
+### INTERACTION reconstruction
+
+<p align="center">
+  <img src="assets/readme/interaction-reconstruction.png" alt="Nine INTERACTION reconstruction examples across merging, roundabout and intersection scenes" width="100%">
+</p>
+
+Selected examples from the paper cover merging, roundabouts, and intersections. Blue lines show TrajBridge reconstructions, dashed orange lines show ground truth in the gap, purple lines show observed history, and dotted teal lines show the future tail.
+
+### Waymo zero-shot examples
+
+<p align="center">
+  <img src="assets/readme/waymo-reconstruction.png" alt="Nine Waymo zero-shot reconstruction examples with observed history and future tails" width="100%">
+</p>
+
+These are favorably selected qualitative examples from the paper. They show individual reconstruction behaviors across road geometries and do not measure how often those behaviors occur in the 500-scene evaluation.
 
 ## Repository layout
 
