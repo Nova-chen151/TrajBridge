@@ -22,10 +22,16 @@
 
 ## ✨ Highlights
 
-| | |
-| :--- | :--- |
-| **↔️ Two-sided reconstruction**<br>Observed history and a measured future tail constrain the missing interval from both sides. | **🚘 Interaction-aware motion priors**<br>Factorized agent, temporal, and mode attention produces multiple joint trajectory hypotheses. |
-| **🌊 Conditional flow refinement**<br>A future-tail-conditioned vector field progressively refines the trajectory priors. | **🌍 Cross-dataset evaluation**<br>The manuscript studies INTERACTION reconstruction and zero-shot transfer to 500 Waymo scenes. |
+<table>
+  <tr>
+    <td width="50%"><strong>↔️ Two-sided reconstruction</strong><br>Observed history and a measured future tail constrain the missing interval from both sides.</td>
+    <td width="50%"><strong>🚘 Interaction-aware motion priors</strong><br>Factorized agent, temporal, and mode attention produces multiple joint trajectory hypotheses.</td>
+  </tr>
+  <tr>
+    <td><strong>🌊 Conditional flow refinement</strong><br>A future-tail-conditioned vector field progressively refines the trajectory priors.</td>
+    <td><strong>🌍 Cross-dataset evaluation</strong><br>The manuscript studies INTERACTION reconstruction and zero-shot transfer to 500 Waymo scenes.</td>
+  </tr>
+</table>
 
 ## Contents
 
