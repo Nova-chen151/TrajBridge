@@ -1,5 +1,9 @@
 # TrajBridge
 
+### Future-Constrained Conditional Flow Bridge for Multi-Agent Trajectory Reconstruction in Dense Traffic
+
+Yuhang Chen, Ruyi Fu, Liyong Zheng, Zuduo Zheng, Jian Sun, and Jie Sun
+
 TrajBridge is a multi-agent trajectory reconstruction project for the INTERACTION dataset. The repository keeps a single, reproducible training and validation path for the model, with the package layout and command-line workflow organized in the spirit of [QCNet](https://github.com/ZikangZhou/QCNet).
 
 **INTERACTION trajectory reconstruction** · [Getting Started](#getting-started) · [Training](#training) · [Validation](#validation) · [Citation](#citation-and-contact)
@@ -12,7 +16,16 @@ TrajBridge is a multi-agent trajectory reconstruction project for the INTERACTIO
 
 The main task is reconstruction. `train.py` builds the `TrajBridge` Lightning module, trains it on the INTERACTION training split, evaluates the validation split during training, and saves checkpoints. `val.py` restores a checkpoint and evaluates the INTERACTION validation split with the same model configuration.
 
-The project description is **Future-Constrained Conditional Flow Bridge for Multi-Agent Trajectory Reconstruction in Dense Traffic**. The current training entry point runs the reconstruction backbone with map encoding. Its configuration disables the flow bridge and posterior bridge, so the included command does not train the conditional flow bridge.
+## Method in the paper
+
+TrajBridge reconstructs an internal trajectory gap using observed motion before the gap, measured motion after it, neighboring agents, and optional map context. The paper describes two stages.
+
+1. **Interaction-aware priors.** Factorized agent, temporal, and mode attention generates multiple joint trajectory hypotheses from the observed history and map.
+2. **Future-constrained refinement.** A future-tail encoder conditions a trajectory-space vector field trained with conditional flow matching. The flow bridge progressively refines the priors toward trajectories compatible with the observations around the gap.
+
+The paper evaluates reconstruction on INTERACTION, zero-shot transfer to 500 Waymo Open Motion Dataset scenes, and downstream kinematic and traffic-conflict analysis. Its reported INTERACTION GapFDE and boundary error are 0.050 m and 0.029 m, respectively. These are manuscript results for the full method. They have not been reproduced by the public training command described below.
+
+**Released training scope.** The current `train.py` uses the history/map backbone for reconstruction and disables the future-tail and flow bridge branches. It does not train the full paper model or reproduce its reported metrics. The bridge modules remain in the source tree, but the public CLI does not configure their training.
 
 ## Repository layout
 
@@ -44,13 +57,21 @@ PyTorch Lightning    2.0.3
 TorchMetrics         1.4.0.post0
 ```
 
-An example environment setup is shown below. Install a PyTorch build that matches the CUDA version on your machine.
+Create the CUDA 12.1 environment using the supplied configuration.
 
 ```bash
-conda create -n trajbridge python=3.8
+git clone https://github.com/Nova-chen151/TrajBridge.git
+cd TrajBridge
+conda env create -f environment.yml
 conda activate trajbridge
-conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
-pip install torch_geometric==2.3.1 pytorch-lightning==2.0.3 torchmetrics==1.4.0.post0 numpy pandas tqdm tensorboard
+python train.py --help
+python val.py --help
+```
+
+The configuration follows the PyTorch, PyG, and Lightning versions used by HPNet and the existing TrajBridge smoke run. The environment file targets Linux with an NVIDIA GPU and CUDA 12.1. For raw map preprocessing, install the Lanelet2 Python bindings separately, as in HPNet.
+
+```bash
+pip install lanelet2==1.2.1
 ```
 
 ### Dataset
@@ -137,7 +158,7 @@ The smoke path was executed successfully on a prepared INTERACTION cache. It is 
 
 ## Reference
 
-The directory split and the separation between training and validation entry points follow the public organization of [QCNet](https://github.com/ZikangZhou/QCNet).
+The training and validation organization follows [QCNet](https://github.com/ZikangZhou/QCNet). Environment setup and INTERACTION data preparation also follow [HPNet](https://github.com/XiaolongTang23/HPNet).
 
 ## Citation and contact
 

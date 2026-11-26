@@ -1,0 +1,20 @@
+name: trajbridge
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.8
+  - pytorch=2.1.0
+  - torchvision=0.16.0
+  - torchaudio=2.1.0
+  - pytorch-cuda=12.1
+  - pip
+  - pip:
+      - torch-geometric==2.3.1
+      - pytorch-lightning==2.0.3
+      - torchmetrics==1.4.0.post0
+      - numpy==1.24.3
+      - pandas==2.0.3
+      - tqdm==4.66.5
+      - tensorboard==2.14.0
