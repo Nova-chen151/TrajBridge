@@ -2,7 +2,7 @@
 
 TrajBridge is a multi-agent trajectory reconstruction project for the INTERACTION dataset. The repository keeps a single, reproducible training and validation path for the model, with the package layout and command-line workflow organized in the spirit of [QCNet](https://github.com/ZikangZhou/QCNet).
 
-> **Current scope**  The public code in this directory covers INTERACTION training and validation only. HkIntersection data, ablation runners, baseline scripts, test-only entry points, and generated experiment artifacts are not included.
+**INTERACTION trajectory reconstruction** · [Getting Started](#getting-started) · [Training](#training) · [Validation](#validation) · [Citation](#citation-and-contact)
 
 ## Overview
 
@@ -12,7 +12,7 @@ TrajBridge is a multi-agent trajectory reconstruction project for the INTERACTIO
 
 The main task is reconstruction. `train.py` builds the `TrajBridge` Lightning module, trains it on the INTERACTION training split, evaluates the validation split during training, and saves checkpoints. `val.py` restores a checkpoint and evaluates the INTERACTION validation split with the same model configuration.
 
-The current repository title follows the project description, **Future-Constrained Conditional Flow Bridge for Multi-Agent Trajectory Reconstruction in Dense Traffic**. The command-line training path is intentionally kept to the reconstruction task so that the released training and validation loop is easy to run and inspect.
+The project description is **Future-Constrained Conditional Flow Bridge for Multi-Agent Trajectory Reconstruction in Dense Traffic**. The current training entry point runs the reconstruction backbone with map encoding. Its configuration disables the flow bridge and posterior bridge, so the included command does not train the conditional flow bridge.
 
 ## Repository layout
 
@@ -31,7 +31,9 @@ Trajbridge/
 └── utils/                      # geometry and preprocessing utilities
 ```
 
-## Environment
+## Getting Started
+
+### Environment
 
 The code was checked with Python 3.8 and the following versions.
 
@@ -47,11 +49,11 @@ An example environment setup is shown below. Install a PyTorch build that matche
 ```bash
 conda create -n trajbridge python=3.8
 conda activate trajbridge
-conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
-pip install torch_geometric pytorch-lightning torchmetrics numpy pandas tqdm
+conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
+pip install torch_geometric==2.3.1 pytorch-lightning==2.0.3 torchmetrics==1.4.0.post0 numpy pandas tqdm tensorboard
 ```
 
-## Dataset
+### Dataset
 
 Set `--root` to the INTERACTION data root. The reader accepts raw files and prepared tensor caches.
 
@@ -64,7 +66,7 @@ INTERACTION_ROOT/
 └── val_processed/             # prepared .pt files
 ```
 
-Use `--processed_only true` when the processed directories are already available. This avoids reading and preprocessing the raw CSV and map files during a run.
+Raw preprocessing requires the Lanelet2 Python bindings and corresponding OSM maps. Use `--processed_only true` when compatible processed directories are already available. This reads the prepared tensors directly.
 
 ## Training
 
@@ -107,7 +109,7 @@ python val.py \
   --devices 1
 ```
 
-For a fast validation check, add `--processed_only true --num_workers 0 --limit_val_batches 1`. The validation entry point restores the model hyperparameters from the checkpoint and reads only the `val` split.
+For a fast validation check, add `--processed_only true --num_workers 0 --limit_val_batches 1`. The validation entry point restores the model hyperparameters from the checkpoint and reads only the `val` split. If training used `--window_protocol fixed_gap --gap_len 20`, pass those same arguments to `val.py` to preserve the evaluation window.
 
 ## Closed-loop verification
 
@@ -128,7 +130,7 @@ The smoke path was executed successfully on a prepared INTERACTION cache. It is 
 
 ## Reproducibility notes
 
-- Training and validation use the same historical and future horizon defaults, reconstruction mask configuration, and checkpoint-defined model hyperparameters.
+- Training and validation use checkpoint-defined model horizons. Pass matching `--window_protocol` and `--gap_len` arguments to validation when changing them from their defaults.
 - Use `--seed` to control the Lightning and data-loader seed.
 - Keep the dataset cache, command-line arguments, checkpoint, and reported metrics together when recording an experiment.
 - The repository does not include raw INTERACTION data, processed caches, checkpoints, or TensorBoard output.
