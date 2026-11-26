@@ -1,146 +1,102 @@
-# TrajBridge
-
-### Future-Constrained Conditional Flow Bridge for Multi-Agent Trajectory Reconstruction in Dense Traffic
-
-Yuhang Chen, Ruyi Fu, Liyong Zheng, Zuduo Zheng, Jian Sun, and Jie Sun
-
-TrajBridge is a multi-agent trajectory reconstruction project for the INTERACTION dataset. The repository keeps a single, reproducible training and validation path for the model, with the package layout and command-line workflow organized in the spirit of [QCNet](https://github.com/ZikangZhou/QCNet).
-
-<div align="center">
-
-[![Method](https://img.shields.io/badge/Method-TrajBridge-2878B5?style=for-the-badge)](#method-in-the-paper)
-[![Results](https://img.shields.io/badge/Paper-Results-019B8F?style=for-the-badge)](#results-from-the-paper)
-[![Getting Started](https://img.shields.io/badge/Getting_Started-5F259F?style=for-the-badge)](#getting-started)
-[![Training](https://img.shields.io/badge/Training-A42C25?style=for-the-badge)](#training)
-
-</div>
-
-## Overview
+<h1 align="center">TrajBridge: Future-Constrained Conditional Flow Bridge for Multi-Agent Trajectory Reconstruction in Dense Traffic</h1>
 
 <p align="center">
-  <img src="./overview.png" alt="TrajBridge overview" width="100%">
+  <a href="https://pytorch.org/">
+    <img src="https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C.svg?style=for-the-badge&amp;logo=pytorch" alt="PyTorch 2.1.0">
+  </a>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.8-blue.svg?style=for-the-badge&amp;logo=python&amp;logoColor=white" alt="Python 3.8">
+  </a>
+  <a href="https://developer.nvidia.com/cuda-toolkit">
+    <img src="https://img.shields.io/badge/CUDA-12.1-76B900.svg?style=for-the-badge&amp;logo=nvidia&amp;logoColor=white" alt="CUDA 12.1">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-7B42BC.svg?style=for-the-badge" alt="License: Apache 2.0">
+  </a>
 </p>
-
-The main task is reconstruction. `train.py` builds the `TrajBridge` Lightning module, trains it on the INTERACTION training split, evaluates the validation split during training, and saves checkpoints. `val.py` restores a checkpoint and evaluates the INTERACTION validation split with the same model configuration.
-
-## Method in the paper
-
-TrajBridge reconstructs an internal trajectory gap using observed motion before the gap, measured motion after it, neighboring agents, and optional map context. The paper describes two stages.
-
-1. **Interaction-aware priors.** Factorized agent, temporal, and mode attention generates multiple joint trajectory hypotheses from the observed history and map.
-2. **Future-constrained refinement.** A future-tail encoder conditions a trajectory-space vector field trained with conditional flow matching. The flow bridge progressively refines the priors toward trajectories compatible with the observations around the gap.
-
-The paper evaluates reconstruction on INTERACTION, zero-shot transfer to 500 Waymo Open Motion Dataset scenes, and downstream kinematic and traffic-conflict analysis. Its reported INTERACTION GapFDE and boundary error are 0.050 m and 0.029 m, respectively. These are manuscript results for the full method. They have not been reproduced by the public training command described below.
-
-**Released training scope.** The current `train.py` uses the history/map backbone for reconstruction and disables the future-tail and flow bridge branches. It does not train the full paper model or reproduce its reported metrics. The bridge modules remain in the source tree, but the public CLI does not configure their training.
-
-## Highlights
-
-- **Two-sided reconstruction** uses observed history and a measured future tail to constrain an internal trajectory gap.
-- **Multi-agent motion priors** model interactions across agents, time, and trajectory modes, with optional map context.
-- **Conditional flow refinement** uses a learned vector field to refine prior trajectories under future-tail conditioning.
-- **Cross-dataset evaluation** examines reconstruction on INTERACTION and zero-shot transfer to a Waymo validation subset.
-
-## Results from the paper
-
-The manuscript evaluates the complete TrajBridge model using 10 history frames, 20 missing frames, and 5 future-tail frames. The values below are reported in the supplied manuscript, using scene-level mode selection. The Waymo study transfers the INTERACTION-trained model without fine-tuning. These figures and metrics describe the full paper model and have not been reproduced by the current public training entry point.
-
-| Evaluation | GapADE ↓ | GapFDE ↓ | Boundary error ↓ |
-| --- | ---: | ---: | ---: |
-| INTERACTION validation | 0.045 m | 0.050 m | 0.029 m |
-| Waymo validation subset, 500 scenes | 0.091 m | 0.105 m | 0.066 m |
-
-### INTERACTION reconstruction
 
 <p align="center">
-  <img src="assets/readme/interaction-reconstruction.png" alt="Nine INTERACTION reconstruction examples across merging, roundabout and intersection scenes" width="100%">
+  <img src="overview.png" alt="TrajBridge architecture: map and history scene encoding; factorized agent, temporal and mode interaction; future-tail encoding; and conditional flow refinement of trajectory priors." width="100%">
 </p>
 
-Selected examples from the paper cover merging, roundabouts, and intersections. Blue lines show TrajBridge reconstructions, dashed orange lines show ground truth in the gap, purple lines show observed history, and dotted teal lines show the future tail.
+## Contents
 
-### Waymo zero-shot examples
+- [✨ Highlights](#highlights)
+- [🎞️ Reconstruction task](#reconstruction-task)
+- [🚘 Qualitative gallery](#qualitative-gallery)
+- [🛠️ Getting started](#getting-started)
+- [🚀 Training](#training)
+- [🔎 Validation](#validation)
+- [🙏 Acknowledgements](#acknowledgements)
+
+<a id="highlights"></a>
+
+## ✨ Highlights
+
+| | |
+| :--- | :--- |
+| **↔️ Two-sided reconstruction**<br>Observed history and a measured future tail constrain the missing interval from both sides. | **🚘 Interaction-aware motion priors**<br>Factorized agent, temporal, and mode attention produces multiple joint trajectory hypotheses. |
+| **🌊 Conditional flow refinement**<br>A future-tail-conditioned vector field progressively refines the trajectory priors. | **🌍 Cross-dataset evaluation**<br>The manuscript studies INTERACTION reconstruction and zero-shot transfer to 500 Waymo scenes. |
+
+<a id="reconstruction-task"></a>
+
+## 🎞️ Reconstruction task
 
 <p align="center">
-  <img src="assets/readme/waymo-reconstruction.png" alt="Nine Waymo zero-shot reconstruction examples with observed history and future tails" width="100%">
+  <picture>
+    <source media="(prefers-reduced-motion: reduce)" srcset="assets/readme/task-window.png">
+    <img src="assets/readme/task-window.gif" alt="Task schematic: 10 observed history frames, 20 missing frames to reconstruct, and 5 measured future-tail frames. Both observed sides remain fixed while the missing segment is illustrated in blue." width="100%">
+  </picture>
 </p>
 
-These are favorably selected qualitative examples from the paper. They show individual reconstruction behaviors across road geometries and do not measure how often those behaviors occur in the 500-scene evaluation.
 
-## Repository layout
+<a id="getting-started"></a>
 
-```text
-Trajbridge/
-├── train.py                    # training entry point
-├── val.py                      # checkpoint validation entry point
-├── model/TrajBridge.py         # TrajBridge LightningModule
-├── datamodules/                # INTERACTION LightningDataModule
-├── datasets/                   # INTERACTION reader and reconstruction masks
-├── modules/                    # backbone, map encoder, and bridge modules
-├── layers/                     # graph attention and MLP layers
-├── losses/                     # training losses
-├── metrics/                    # validation metrics
-├── transforms/                 # training augmentations
-└── utils/                      # geometry and preprocessing utilities
-```
+## 🛠️ Getting started
 
-## Getting Started
+### 1. Environment Setup
 
-### Environment
-
-The code was checked with Python 3.8 and the following versions.
-
-```text
-PyTorch              2.1.0
-PyTorch Geometric    2.3.1
-PyTorch Lightning    2.0.3
-TorchMetrics         1.4.0.post0
-```
-
-Create the CUDA 12.1 environment using the supplied configuration.
+Clone the repository and set up the environment:
 
 ```bash
 git clone https://github.com/Nova-chen151/TrajBridge.git
 cd TrajBridge
 conda env create -f environment.yml
 conda activate trajbridge
-python train.py --help
-python val.py --help
 ```
 
-The configuration follows the PyTorch, PyG, and Lightning versions used by HPNet and the existing TrajBridge smoke run. The environment file targets Linux with an NVIDIA GPU and CUDA 12.1. For raw map preprocessing, install the Lanelet2 Python bindings separately, as in HPNet.
+### 2. Dataset
 
-```bash
+Download the [INTERACTION Dataset v1.2](https://interaction-dataset.com/). Here, we only need the data for the multi-agent tracks. After downloading and extracting the zip files, organize the dataset directory as follows:
+
+```
+/path/to/INTERACTION_root/
+├── maps/
+├── test_conditional-multi-agent/
+├── test_multi-agent/
+├── train/
+│   ├── DR_CHN_Merging_ZS0_train
+│   ├── ...
+└── val/
+    ├── DR_CHN_Merging_ZS0_val
+    ├── ...
+
+```
+
+Install the map dependency [lanelet2](https://github.com/fzi-forschungszentrum-informatik/Lanelet2):
+```
 pip install lanelet2==1.2.1
 ```
 
-### Dataset
+<a id="training"></a>
 
-Set `--root` to the INTERACTION data root. The reader accepts raw files and prepared tensor caches.
-
-```text
-INTERACTION_ROOT/
-├── train/                     # raw training CSV files
-├── val/                       # raw validation CSV files
-├── maps/                      # Lanelet2 OSM maps
-├── train_processed/           # prepared .pt files
-└── val_processed/             # prepared .pt files
-```
-
-Raw preprocessing requires the Lanelet2 Python bindings and corresponding OSM maps. Use `--processed_only true` when compatible processed directories are already available. This reads the prepared tensors directly.
-
-## Training
+## 🚀 Training
 
 ```bash
-python train.py \
-  --root /path/to/INTERACTION_ROOT \
-  --train_batch_size 4 \
-  --val_batch_size 4 \
-  --devices 1
+python train.py --root /path/to/INTERACTION_ROOT --train_batch_size 4 --val_batch_size 4 --devices 1
 ```
 
-By default, the run is created under `runs/<timestamp>/`. The trainer saves `last.ckpt` and the checkpoint with the best `val_recon_minJointFDE` under the run's `checkpoints/` directory.
-
-For a quick end-to-end smoke run, use one batch from each split.
+Use a compatible prepared INTERACTION cache to exercise the public path from data loading to checkpoint restoration:
 
 ```bash
 python train.py \
@@ -155,50 +111,78 @@ python train.py \
   --limit_train_batches 1 \
   --limit_val_batches 1 \
   --default_root_dir runs/smoke
-```
 
-## Validation
-
-Pass a checkpoint produced by `train.py` to `val.py`.
-
-```bash
 python val.py \
   --root /path/to/INTERACTION_ROOT \
-  --ckpt_path runs/<timestamp>/checkpoints/last.ckpt \
-  --val_batch_size 4 \
-  --devices 1
+  --processed_only true \
+  --num_workers 0 \
+  --accelerator cpu \
+  --devices 1 \
+  --limit_val_batches 1 \
+  --ckpt_path runs/smoke/checkpoints/last.ckpt
 ```
+</details>
 
-For a fast validation check, add `--processed_only true --num_workers 0 --limit_val_batches 1`. The validation entry point restores the model hyperparameters from the checkpoint and reads only the `val` split. If training used `--window_protocol fixed_gap --gap_len 20`, pass those same arguments to `val.py` to preserve the evaluation window.
+<a id="validation"></a>
 
-## Closed-loop verification
-
-The following two commands exercise the complete public path from data loading to checkpoint restoration and validation.
+## 🔎 Validation
 
 ```bash
-python train.py --root /path/to/INTERACTION_ROOT \
-  --processed_only true --train_batch_size 1 --val_batch_size 1 \
-  --num_workers 0 --accelerator cpu --devices 1 --max_epochs 1 \
-  --limit_train_batches 1 --limit_val_batches 1 --default_root_dir runs/smoke
-
-python val.py --root /path/to/INTERACTION_ROOT \
-  --processed_only true --num_workers 0 --accelerator cpu --devices 1 \
-  --limit_val_batches 1 --ckpt_path runs/smoke/checkpoints/last.ckpt
+python val.py --root /path/to/INTERACTION_ROOT --ckpt_path runs/<timestamp>/checkpoints/last.ckpt --val_batch_size 4 --devices 1
 ```
+<a id="qualitative-gallery"></a>
 
-The smoke path was executed successfully on a prepared INTERACTION cache. It is intended as an integration check, not as a reported benchmark result.
+## 🚘 Qualitative gallery
 
-## Reproducibility notes
+<table>
+  <tr>
+    <th width="50%">INTERACTION reconstruction</th>
+    <th width="50%">Waymo zero-shot transfer</th>
+  </tr>
+  <tr>
+    <td valign="top">
+      <picture>
+        <source media="(prefers-reduced-motion: reduce)" srcset="assets/readme/interaction-preview.png">
+        <img src="assets/readme/interaction-preview.gif" alt="Slideshow of nine static INTERACTION paper examples covering merging, roundabouts, and intersections. Not a temporal rollout." width="100%">
+      </picture>
+    </td>
+    <td valign="top">
+      <picture>
+        <source media="(prefers-reduced-motion: reduce)" srcset="assets/readme/waymo-preview.png">
+        <img src="assets/readme/waymo-preview.gif" alt="Slideshow of nine static Waymo paper examples from the zero-shot transfer study. Not a temporal rollout." width="100%">
+      </picture>
+    </td>
+  </tr>
+  <tr>
+    <td>Dense multi-agent interactions across merging, roundabouts, and intersections.</td>
+    <td>Selected qualitative examples from transfer without fine-tuning.</td>
+  </tr>
+</table>
 
-- Training and validation use checkpoint-defined model horizons. Pass matching `--window_protocol` and `--gap_len` arguments to validation when changing them from their defaults.
-- Use `--seed` to control the Lightning and data-loader seed.
-- Keep the dataset cache, command-line arguments, checkpoint, and reported metrics together when recording an experiment.
-- The repository does not include raw INTERACTION data, processed caches, checkpoints, or TensorBoard output.
+<details>
+<summary><b>Expand: full-resolution INTERACTION figure and legend</b></summary>
 
-## Reference
+<p align="center">
+  <a href="assets/readme/interaction-reconstruction.png">
+    <img src="assets/readme/interaction-reconstruction.png" alt="Full nine-panel INTERACTION reconstruction figure with scene names and the original legend." width="100%">
+  </a>
+</p>
 
-The training and validation organization follows [QCNet](https://github.com/ZikangZhou/QCNet). Environment setup and INTERACTION data preparation also follow [HPNet](https://github.com/XiaolongTang23/HPNet).
+</details>
 
-## Citation and contact
+<details>
+<summary><b>Expand: full-resolution Waymo figure and legend</b></summary>
 
-The paper citation will be added after publication. For questions or reproducibility issues, please open an issue in the [TrajBridge repository](https://github.com/Nova-chen151/TrajBridge).
+<p align="center">
+  <a href="assets/readme/waymo-reconstruction.png">
+    <img src="assets/readme/waymo-reconstruction.png" alt="Full nine-panel Waymo zero-shot reconstruction figure with its original vehicle, trajectory, and map legend." width="100%">
+  </a>
+</p>
+
+</details>
+
+<a id="acknowledgements"></a>
+
+## 🙏 Acknowledgements
+
+We sincerely appreciate INTERACTION, [QCNet](https://github.com/ZikangZhou/QCNet) and [HPNet](https://github.com/XiaolongTang23/HPNet) for their awesome codebases.
