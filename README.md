@@ -94,33 +94,6 @@ pip install lanelet2==1.2.1
 python train.py --root /path/to/INTERACTION_ROOT --train_batch_size 4 --val_batch_size 4 --devices 1
 ```
 
-Use a compatible prepared INTERACTION cache to exercise the public path from data loading to checkpoint restoration:
-
-```bash
-python train.py \
-  --root /path/to/INTERACTION_ROOT \
-  --processed_only true \
-  --train_batch_size 1 \
-  --val_batch_size 1 \
-  --num_workers 0 \
-  --accelerator cpu \
-  --devices 1 \
-  --max_epochs 1 \
-  --limit_train_batches 1 \
-  --limit_val_batches 1 \
-  --default_root_dir runs/smoke
-
-python val.py \
-  --root /path/to/INTERACTION_ROOT \
-  --processed_only true \
-  --num_workers 0 \
-  --accelerator cpu \
-  --devices 1 \
-  --limit_val_batches 1 \
-  --ckpt_path runs/smoke/checkpoints/last.ckpt
-```
-</details>
-
 <a id="validation"></a>
 
 ## 🔎 Validation
@@ -183,4 +156,4 @@ python val.py --root /path/to/INTERACTION_ROOT --ckpt_path runs/<timestamp>/chec
 
 ## 🙏 Acknowledgements
 
-We sincerely appreciate INTERACTION, [QCNet](https://github.com/ZikangZhou/QCNet) and [HPNet](https://github.com/XiaolongTang23/HPNet) for their awesome codebases.
+We sincerely appreciate [QCNet](https://github.com/ZikangZhou/QCNet) and [HPNet](https://github.com/XiaolongTang23/HPNet) for their awesome codebases.
