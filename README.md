@@ -16,20 +16,9 @@
 </p>
 
 <p align="center">
-  <img src="overview.png" alt="TrajBridge architecture: map and history scene encoding; factorized agent, temporal and mode interaction; future-tail encoding; and conditional flow refinement of trajectory priors." width="100%">
+  <img src="assets/overview.png" alt="TrajBridge architecture: map and history scene encoding; factorized agent, temporal and mode interaction; future-tail encoding; and conditional flow refinement of trajectory priors." width="100%">
 </p>
 
-## Contents
-
-- [✨ Highlights](#highlights)
-- [🎞️ Reconstruction task](#reconstruction-task)
-- [🛠️ Getting started](#getting-started)
-- [🚀 Training](#training)
-- [🔎 Validation](#validation)
-- [🚘 Qualitative Gallery](#qualitative-gallery)
-- [🙏 Acknowledgements](#acknowledgements)
-
-<a id="highlights"></a>
 
 ## ✨ Highlights
 
@@ -37,6 +26,15 @@
 | :--- | :--- |
 | **↔️ Two-sided reconstruction**<br>Observed history and a measured future tail constrain the missing interval from both sides. | **🚘 Interaction-aware motion priors**<br>Factorized agent, temporal, and mode attention produces multiple joint trajectory hypotheses. |
 | **🌊 Conditional flow refinement**<br>A future-tail-conditioned vector field progressively refines the trajectory priors. | **🌍 Cross-dataset evaluation**<br>The manuscript studies INTERACTION reconstruction and zero-shot transfer to 500 Waymo scenes. |
+
+## Contents
+
+- [🎞️ Reconstruction task](#reconstruction-task)
+- [🛠️ Getting started](#getting-started)
+- [🚀 Training](#training)
+- [🔎 Validation](#validation)
+- [🚘 Qualitative Gallery](#qualitative-gallery)
+- [🙏 Acknowledgements](#acknowledgements)
 
 <a id="reconstruction-task"></a>
 
