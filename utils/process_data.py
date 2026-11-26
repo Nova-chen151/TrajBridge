@@ -127,20 +127,7 @@ def generate_predict_mask(visible_mask: torch.Tensor, num_visible_steps: int) ->
     return predict_mask
 
 def sigmoid_smooth_social_force(pred_traj, target_last_3, blend_frames=5, force_strength=0.08, velocity_weight=0.05, use_social_force=True):
-    """
-    在sigmoid_smooth基础上加入社会力模型的思想 - 超保守版本
-
-    Args:
-        pred_traj: [N, F, 2] 预测轨迹
-        target_last_3: [N, 3, 2] 真实轨迹最后3帧
-        blend_frames: 混合帧数
-        force_strength: 社会力强度系数 (极低以避免过度调整)
-        velocity_weight: 速度对齐权重
-        use_social_force: 是否启用社会力调整
-
-    Returns:
-        smoothed: [N, F, 2] 平滑后的轨迹
-    """
+    """Blend trajectories toward the observed tail with an optional social-force correction."""
     N, F, _ = pred_traj.shape
     device = pred_traj.device
     dtype = pred_traj.dtype
@@ -158,7 +145,6 @@ def sigmoid_smooth_social_force(pred_traj, target_last_3, blend_frames=5, force_
             target_idx = t - (F - 3)
             smoothed[:, t, :] = target_last_3[:, target_idx, :]
         else:
-            # 基础的sigmoid混合
             position_in_blend = t - blend_start
             normalized_pos = position_in_blend / blend_frames
             alpha = torch.sigmoid(torch.tensor((normalized_pos - 0.5) * 6, device=device, dtype=dtype))
@@ -166,27 +152,21 @@ def sigmoid_smooth_social_force(pred_traj, target_last_3, blend_frames=5, force_
 
             current_pos = pred_traj[:, t, :]
 
-            if use_social_force and t >= blend_start + 1:  # 只在后半部分帧应用社会力
-                # 计算社会力模型的驱动力 - 极低强度
+            if use_social_force and t >= blend_start + 1:
                 target_pos = target_start
 
-                # 计算距离，只有距离较大时才应用社会力
                 distance_to_target = torch.norm(target_pos - current_pos, dim=-1, keepdim=True)
-                distance_threshold = torch.tensor(0.5, device=device, dtype=dtype)  # 距离阈值
+                distance_threshold = torch.tensor(0.5, device=device, dtype=dtype)
 
-                # 只有当距离超过阈值时才应用社会力
                 social_force_mask = (distance_to_target > distance_threshold).float()
 
-                # 简单的驱动力：朝向目标的微小调整
                 driving_force = (target_pos - current_pos) * force_strength * social_force_mask
 
-                # 计算预测轨迹的速度趋势
                 if t > 0:
                     pred_velocity = pred_traj[:, t, :] - pred_traj[:, t-1, :]
                 else:
                     pred_velocity = torch.zeros_like(current_pos)
 
-                # 计算与目标轨迹的速度一致性 - 只在距离较大时应用
                 remaining_steps = (F - 3) - t
                 if remaining_steps > 0:
                     target_velocity = (target_last_3[:, -1, :] - target_start) / remaining_steps
@@ -194,25 +174,20 @@ def sigmoid_smooth_social_force(pred_traj, target_last_3, blend_frames=5, force_
                 else:
                     velocity_alignment = torch.zeros_like(current_pos)
 
-                # 总的社会力
                 social_force = driving_force + velocity_alignment
 
-                # 限制社会力的最大幅度
-                max_force = distance_to_target * 0.1  # 进一步降低最大调整幅度
+                max_force = distance_to_target * 0.1
                 social_force = torch.clamp(social_force, -max_force, max_force)
 
-                # 应用社会力调整预测轨迹
                 adjusted_pred = current_pos + social_force
             else:
-                # 不应用社会力，直接使用原始预测
                 adjusted_pred = current_pos
 
-            # 使用调整后的预测轨迹进行sigmoid混合
             smoothed[:, t, :] = (1 - alpha) * adjusted_pred + alpha * target_start
 
     return smoothed
 
-def linear_smooth(pred_traj, target_last_3, transition_frames=5):  # 0.429907
+def linear_smooth(pred_traj, target_last_3, transition_frames=5):
     N, F, _ = pred_traj.shape
     smoothed = pred_traj.clone()
     
@@ -233,7 +208,7 @@ def linear_smooth(pred_traj, target_last_3, transition_frames=5):  # 0.429907
     
     return smoothed
 
-def exponential_smooth(pred_traj, target_last_3, transition_frames=5, exp_factor=2.0):   # 0.451212
+def exponential_smooth(pred_traj, target_last_3, transition_frames=5, exp_factor=2.0):
     N, F, _ = pred_traj.shape
     smoothed = pred_traj.clone()
     
@@ -260,21 +235,7 @@ def exponential_smooth(pred_traj, target_last_3, transition_frames=5, exp_factor
 
 
 def social_force_smooth(pred_traj, target_last_3, num_particles=100, blend_frames=8, noise_pos=0.05, noise_vel=0.1):
-    """
-    基于社会力模型思想的粒子滤波平滑
-    参考 SFPF_denoise 方法，使用物理模型引导 + 粒子滤波融合
-    
-    Args:
-        pred_traj: [N, F, 2] 预测轨迹
-        target_last_3: [N, 3, 2] 真实轨迹最后3帧
-        num_particles: 粒子数量
-        blend_frames: 混合帧数
-        noise_pos: 位置噪声
-        noise_vel: 速度噪声
-    
-    Returns:
-        smoothed: [N, F, 2] 平滑后的轨迹
-    """
+    """Smooth trajectories with a social-force particle filter and observed tail."""
     N, F, _ = pred_traj.shape
     device = pred_traj.device
     dtype = pred_traj.dtype
@@ -289,17 +250,14 @@ def social_force_smooth(pred_traj, target_last_3, num_particles=100, blend_frame
     blend_start = max(0, F - 3 - blend_frames)
     
     for n in range(N):
-        # 获取单条轨迹
         single_pred = pred_traj[n]  # [F, 2]
         single_target = target_last_3[n]  # [3, 2]
         
-        # 计算初始速度和方向（社会力模型中的驱动力）
         if F > 1:
             v_initial = single_pred[1] - single_pred[0]
         else:
             v_initial = torch.zeros(2, device=device, dtype=dtype)
         
-        # 计算目标方向（从预测轨迹指向真实轨迹终点的期望方向）
         target_direction = single_target[-1] - single_pred[blend_start]
         target_dist = torch.norm(target_direction)
         if target_dist > 1e-6:
@@ -308,7 +266,6 @@ def social_force_smooth(pred_traj, target_last_3, num_particles=100, blend_frame
             target_direction = torch.zeros(2, device=device, dtype=dtype)
             target_dist = torch.tensor(0.0, device=device, dtype=dtype)
         
-        # 初始化粒子：[position_x, position_y, velocity_x, velocity_y]
         particles = torch.zeros(num_particles, 4, device=device, dtype=dtype)
         start_pos = single_pred[blend_start]
         particles[:, 0] = start_pos[0] + torch.randn(num_particles, device=device, dtype=dtype) * noise_pos
@@ -316,32 +273,26 @@ def social_force_smooth(pred_traj, target_last_3, num_particles=100, blend_frame
         particles[:, 2] = v_initial[0] + torch.randn(num_particles, device=device, dtype=dtype) * noise_vel
         particles[:, 3] = v_initial[1] + torch.randn(num_particles, device=device, dtype=dtype) * noise_vel
         
-        # 时间步长
         dt = 0.1
         
         for t in range(blend_start, F):
             if t >= F - 3:
-                # 最后3帧直接使用真实值
                 target_idx = t - (F - 3)
                 smoothed[n, t] = single_target[target_idx]
             else:
-                # 社会力模型更新粒子
                 for p in range(num_particles):
                     pos = particles[p, :2]
                     vel = particles[p, 2:]
                     
-                    # 驱动力：朝向目标的方向
                     to_target = single_target[0] - pos
                     dist_to_target = torch.norm(to_target)
                     
-                    # 使用item()获取标量值进行比较，避免CUDA断言
                     dist_val = dist_to_target.item()
                     if dist_val > 1e-6:
                         desired_direction = to_target / dist_to_target
                     else:
                         desired_direction = torch.zeros(2, device=device, dtype=dtype)
                     
-                    # 期望速度（基于剩余距离和时间）
                     remaining_steps = (F - 3) - t
                     if remaining_steps > 0 and target_dist.item() > 1e-6:
                         desired_speed = target_dist / (remaining_steps * dt + 0.001)
@@ -349,51 +300,40 @@ def social_force_smooth(pred_traj, target_last_3, num_particles=100, blend_frame
                     else:
                         desired_speed = torch.tensor(0.0, device=device, dtype=dtype)
                     
-                    # 计算驱动力（期望速度与实际速度的差）
                     desired_vel = desired_direction * desired_speed
                     force_driving = (desired_vel - vel) * 2.0
                     
-                    # 计算与预测轨迹的吸引力（引导粒子靠近预测轨迹）
                     to_pred = single_pred[t] - pos
                     force_pred = to_pred * 0.5
                     
-                    # 总力
                     total_force = force_driving + force_pred
                     
-                    # 更新速度和位置（考虑噪声）
                     noise_v = torch.randn(2, device=device, dtype=dtype) * noise_vel
                     noise_p = torch.randn(2, device=device, dtype=dtype) * noise_pos
                     new_vel = vel + total_force * dt + noise_v
                     new_pos = pos + new_vel * dt + noise_p
                     
-                    # 数值稳定性检查
                     new_pos = torch.clamp(new_pos, -1000.0, 1000.0)
                     new_vel = torch.clamp(new_vel, -50.0, 50.0)
                     
                     particles[p, :2] = new_pos
                     particles[p, 2:] = new_vel
                 
-                # 计算权重（基于与预测轨迹的匹配度）
                 pred_point = single_pred[t]
                 distances = torch.norm(particles[:, :2] - pred_point.unsqueeze(0), dim=1)
                 
-                # 避免过大的距离导致数值问题
                 distances = torch.clamp(distances, 0.0, 10.0)
                 weights = torch.exp(-distances ** 2 / (2 * noise_pos ** 2))
                 
-                # 确保权重有效且不为全零
                 weights_sum = weights.sum()
                 if weights_sum.item() < 1e-10:
                     weights = torch.ones(num_particles, device=device, dtype=dtype) / num_particles
                 else:
                     weights = weights / weights_sum
                 
-                # 加权平均作为平滑后的点（在重采样前计算）
                 smoothed_pos = (particles[:, :2] * weights.unsqueeze(1)).sum(dim=0)
                 
-                # 重采样（仅在还有混合帧时进行）
                 if t < F - 4:
-                    # 确保权重严格正数
                     weights_min = weights.min().item()
                     if weights_min < 1e-10:
                         weights_safe = weights + 1e-8
@@ -401,15 +341,14 @@ def social_force_smooth(pred_traj, target_last_3, num_particles=100, blend_frame
                         weights_safe = weights
                     weights_safe = weights_safe / weights_safe.sum()
                     
-                    # 使用CPU进行multinomial避免CUDA断言问题
+                    # Sample on CPU to avoid CUDA multinomial assertions.
                     weights_cpu = weights_safe.cpu()
                     indices = torch.multinomial(weights_cpu, num_particles, replacement=True)
                     indices = indices.to(device)
                     particles = particles[indices]
                 
-                # 混合：随着接近真实轨迹，逐渐增加真实轨迹的权重
                 progress = (t - blend_start) / blend_frames if blend_frames > 0 else 1.0
-                alpha = min(progress * 0.1, 0.1)  # 最多30%的真实轨迹引导
+                alpha = min(progress * 0.1, 0.1)
                 
                 target_point = single_target[0] + target_direction * target_dist * progress
                 final_pos = (1 - alpha) * smoothed_pos + alpha * target_point
@@ -418,7 +357,7 @@ def social_force_smooth(pred_traj, target_last_3, num_particles=100, blend_frame
     
     return smoothed
 
-def sigmoid_smooth(pred_traj, target_last_3, blend_frames=5):   # 0.42717
+def sigmoid_smooth(pred_traj, target_last_3, blend_frames=5):
     F = pred_traj.shape[1]
     smoothed = pred_traj.clone()
     
@@ -444,11 +383,9 @@ def sigmoid_smooth(pred_traj, target_last_3, blend_frames=5):   # 0.42717
 
 
 def compute_kinematics_from_traj(pos: torch.Tensor, mask: Optional[torch.Tensor] = None, dt: float = DT) -> dict:
-    """
-    从轨迹计算速度、加速度、角速度、角加速度。
-    pos: [N, F, 2], mask: [N, F] (optional, True=valid)
-    Returns: dict with velocity [N,F-1,2], acceleration [N,F-2,2], angular_velocity [N,F-2], angular_acceleration [N,F-3]
-    """
+    """Compute linear and angular velocity and acceleration from positions.
+
+    Positions have shape [N, F, 2]; an optional [N, F] mask marks valid frames."""
     N, F, _ = pos.shape
     device, dtype = pos.device, pos.dtype
 
@@ -482,12 +419,9 @@ def compute_kinematics_from_traj(pos: torch.Tensor, mask: Optional[torch.Tensor]
 
 
 def compute_relative_kinematics(pos: torch.Tensor, mask: Optional[torch.Tensor] = None, dt: float = DT) -> dict:
-    """
-    计算同一batch内智能体间的相对位置、相对速度、相对加速度。
-    pos: [N, F, 2], N个智能体; mask: [N, F] True=有效
-    Returns: dict with relative_position [P,F,2], relative_velocity [P,F-1,2], relative_acceleration [P,F-2,2]
-    P = N*(N-1)//2
-    """
+    """Compute pairwise relative positions, velocities, and accelerations within a batch.
+
+    Positions have shape [N, F, 2]; an optional [N, F] mask marks valid frames."""
     kin = compute_kinematics_from_traj(pos, mask, dt)
     N, F, _ = pos.shape
 
@@ -519,11 +453,7 @@ def compute_relative_kinematics(pos: torch.Tensor, mask: Optional[torch.Tensor] 
 
 def js_divergence_histogram(pred: torch.Tensor, target: torch.Tensor, pred_mask: Optional[torch.Tensor] = None,
                             target_mask: Optional[torch.Tensor] = None, num_bins: int = 50, eps: float = 1e-10) -> float:
-    """
-    基于直方图的JS散度。将连续值离散化后计算。
-    pred, target: 任意形状，会被flatten。pred_mask, target_mask: 同形状，True=有效。
-    Returns: JS divergence (scalar)
-    """
+    """Compute histogram-based Jensen-Shannon divergence over optional valid masks."""
     pred_np = pred.detach().cpu().numpy().flatten()
     target_np = target.detach().cpu().numpy().flatten()
     if pred_mask is not None:

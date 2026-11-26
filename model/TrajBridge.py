@@ -35,8 +35,6 @@ from utils import compute_kinematics_from_traj
 from utils import compute_relative_kinematics
 from utils import js_divergence_histogram
 
-# torch.set_float32_matmul_precision('high')
-
 class TrajBridge(pl.LightningModule):
 
     def __init__(self,
@@ -334,8 +332,7 @@ class TrajBridge(pl.LightningModule):
         if self.use_map_encoder and self.MapEncoder is not None and self._has_map_inputs(data):
             lane_embs = self.MapEncoder(data=data)
 
-        # Optional posterior bridge: history/map prior remains the backbone output;
-        # observed future tail only contributes through a bounded residual branch.
+        # The posterior bridge refines the history/map prior using the observed tail.
         traj_propose, traj_output = self.Backbone(data=data, l_embs=lane_embs)
         self._last_bridge_info = None
         self._last_bridge_debug = {}
@@ -750,7 +747,7 @@ class TrajBridge(pl.LightningModule):
         return residual.sum() * 0.0
 
     def training_step(self,data,batch_idx):
-        traj_propose, traj_output = self(data)               #[(N1,...,Nb),H,K,F,2],[(N1,...,Nb),H,K,F],[(N1,...,Nb),H,K]
+        traj_propose, traj_output = self(data)               # [N, H, K, F, 2]
 
         if self._is_recovery_task():
             reg_loss_traj_propose, reg_loss_traj_refine, traj_best_output, boundary_loss = self._compute_reconstruction_loss(data, traj_propose, traj_output)
