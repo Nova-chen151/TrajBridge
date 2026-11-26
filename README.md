@@ -23,10 +23,10 @@
 
 - [✨ Highlights](#highlights)
 - [🎞️ Reconstruction task](#reconstruction-task)
-- [🚘 Qualitative gallery](#qualitative-gallery)
 - [🛠️ Getting started](#getting-started)
 - [🚀 Training](#training)
 - [🔎 Validation](#validation)
+- [🚘 Qualitative Gallery](#qualitative-gallery)
 - [🙏 Acknowledgements](#acknowledgements)
 
 <a id="highlights"></a>
@@ -132,7 +132,7 @@ python val.py --root /path/to/INTERACTION_ROOT --ckpt_path runs/<timestamp>/chec
 ```
 <a id="qualitative-gallery"></a>
 
-## 🚘 Qualitative gallery
+## 🚘 Qualitative Gallery
 
 <table>
   <tr>
